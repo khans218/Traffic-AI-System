@@ -36,11 +36,12 @@ public class WaysControl : MonoBehaviour
 
     void Start()
     {
+        
         if (way1) waysConnected[0] = way1.GetComponent<Node>();
         if (way2) waysConnected[1] = way2.GetComponent<Node>();
         if (way3) waysConnected[2] = way3.GetComponent<Node>();
         if (way4) waysConnected[3] = way4.GetComponent<Node>();
-
+        
         TrafficWaitTimer = 3.0f;
 
         if (!TCActive) return;
@@ -113,11 +114,12 @@ public class WaysControl : MonoBehaviour
         Gizmos.color = Color.blue;
         Gizmos.DrawWireSphere(transform.position, stopDistance);
         Gizmos.color = Color.blue;
-
+        
         if (way1 && ways > 0) { Gizmos.DrawCube(way1.position, Vector3.one * 2); Gizmos.DrawIcon(way1.TransformPoint(Vector3.up), (way1Mode == 0) ? "OneWay" : "TwoWay", false); }
         if (way2 && ways > 1) { Gizmos.DrawCube(way2.position, Vector3.one * 2); Gizmos.DrawIcon(way2.TransformPoint(Vector3.up), (way2Mode == 0) ? "OneWay" : "TwoWay", false); }
         if (way3 && ways > 2) { Gizmos.DrawCube(way3.position, Vector3.one * 2); Gizmos.DrawIcon(way3.TransformPoint(Vector3.up), (way3Mode == 0) ? "OneWay" : "TwoWay", false); }
         if (way4 && ways > 3) { Gizmos.DrawCube(way4.position, Vector3.one * 2); Gizmos.DrawIcon(way4.TransformPoint(Vector3.up), (way4Mode == 0) ? "OneWay" : "TwoWay", false); }
+        
     }
 
 }
