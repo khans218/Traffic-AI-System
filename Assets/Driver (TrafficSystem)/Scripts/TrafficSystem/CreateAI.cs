@@ -163,10 +163,9 @@ public class CreateAI : MonoBehaviour
             if (vehicleTimer == 0)
             {
                 Collider[] nodes = Physics.OverlapSphere(transform.position, 300, nodeMask);
-
                     foreach (Collider node in nodes)
                     {
-                        float Dist = Vector3.Distance(transform.position, node.transform.position);
+                    float Dist = Vector3.Distance(transform.position, node.transform.position);
 
                         if (Dist < 250 && Dist > 200)
                         {

@@ -345,9 +345,7 @@ public class AIVehicle : MonoBehaviour
 
     Transform RandomWay(Transform node, int maxWays)
     {
-
         WaysControl waysControl = currentNode.GetComponent<WaysControl>();
-
 
         while (wayActive == false)
         {

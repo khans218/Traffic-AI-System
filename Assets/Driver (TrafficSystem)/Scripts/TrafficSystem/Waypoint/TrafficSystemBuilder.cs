@@ -19,10 +19,39 @@ public class TrafficSystemBuilder : EditorWindow {
     }
 
     public int numNodes;
+    GameObject inter1;
+    GameObject inter2;
+    string myString;
+    float widthDistance;
 
     void OnGUI ()
     {
+        Event e = Event.current;
+        if (e != null)
+        {
+            if (e.isMouse && e.shift && e.type == EventType.MouseDown)
+            {
+                Debug.Log("clicked");
+            }
+        }
+
+        if (Selection.gameObjects.Length == 1)
+        {
+            inter1 = Selection.gameObjects[0];
+        }
+        if (Selection.gameObjects.Length == 2)
+        {
+            if (Selection.gameObjects[1] == inter1)
+            {
+                inter2 = Selection.gameObjects[0];
+            } else
+            {
+                inter2 = Selection.gameObjects[1];
+            }
+        }
+
         numNodes = EditorGUILayout.IntSlider(numNodes, 1, 10);
+
         if (GUILayout.Button("Link Intersections"))
         {
             if (Selection.gameObjects.Length != 2)
@@ -39,9 +68,6 @@ public class TrafficSystemBuilder : EditorWindow {
                     return;
                 }
             }
-
-            GameObject inter1 = Selection.gameObjects[0];
-            GameObject inter2 = Selection.gameObjects[1];
 
             WaysControl wayController1 = inter1.GetComponent<WaysControl>();
             WaysControl wayController2 = inter2.GetComponent<WaysControl>();
@@ -62,11 +88,15 @@ public class TrafficSystemBuilder : EditorWindow {
 
             for (int i = 0; i < numNodes; i++)
             {
-                GameObject node = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                GameObject node = new GameObject();
+                node.layer = 8;
                 node.transform.SetParent(path.transform);
                 node.name = i.ToString();
                 node.transform.position = inter1.transform.position + dir * (i + 1);
                 node.AddComponent<Node>();
+                node.AddComponent<BoxCollider>();
+                Collider nodeCollider = node.GetComponent<BoxCollider>();
+                nodeCollider.isTrigger = true;
                 Nodes.Add(node);
             }
 
@@ -144,6 +174,20 @@ public class TrafficSystemBuilder : EditorWindow {
             }
             wayController2.ways++;
             path.name = "0";
+            path.AddComponent<VehiclePath>();
+        }
+
+        widthDistance = EditorGUILayout.Slider(widthDistance, 0, 9);
+        if (GUILayout.Button("Set selected Nodes Width"))
+        {
+            foreach (GameObject obj in Selection.gameObjects)
+            {
+                if (obj.HasComponent<Node>())
+                {
+                    Node node = obj.GetComponent<Node>();
+                    node.widthDistance = widthDistance;
+                }
+            }
         }
     }
 }
