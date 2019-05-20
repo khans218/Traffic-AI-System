@@ -19,165 +19,15 @@ public class TrafficSystemBuilder : EditorWindow {
     }
 
     public int numNodes;
-    GameObject inter1;
-    GameObject inter2;
+    Object inter1Obj;
+    Object inter2Obj;
     string myString;
     float widthDistance;
 
     void OnGUI ()
     {
-        Event e = Event.current;
-        if (e != null)
-        {
-            if (e.isMouse && e.shift && e.type == EventType.MouseDown)
-            {
-                Debug.Log("clicked");
-            }
-        }
-
-        if (Selection.gameObjects.Length == 1)
-        {
-            inter1 = Selection.gameObjects[0];
-        }
-        if (Selection.gameObjects.Length == 2)
-        {
-            if (Selection.gameObjects[1] == inter1)
-            {
-                inter2 = Selection.gameObjects[0];
-            } else
-            {
-                inter2 = Selection.gameObjects[1];
-            }
-        }
-
-        numNodes = EditorGUILayout.IntSlider(numNodes, 1, 10);
-
-        if (GUILayout.Button("Link Intersections"))
-        {
-            if (Selection.gameObjects.Length != 2)
-            {
-                Debug.Log("Please select only two objects");
-                return;
-            }
-
-            foreach (GameObject obj in Selection.gameObjects)
-            {
-                if (!(obj.HasComponent<WaysControl>()))
-                {
-                    Debug.Log("Please Select an Intersection");
-                    return;
-                }
-            }
-
-            WaysControl wayController1 = inter1.GetComponent<WaysControl>();
-            WaysControl wayController2 = inter2.GetComponent<WaysControl>();
-
-            if ((wayController1.ways == 4 && wayController1.way4 != null) || (wayController2.ways == 4 && wayController2.way4 != null))
-            {
-                Debug.Log("Intersection cannot have more than 4 links");
-                return;
-            }
-
-            GameObject path = new GameObject();
-            path.transform.position = (inter1.transform.position + inter2.transform.position) / 2;
-            path.name = "way0";
-
-            List<GameObject> Nodes = new List<GameObject>();
-
-            Vector3 dir = (inter2.transform.position - inter1.transform.position) / (numNodes + 1);
-
-            for (int i = 0; i < numNodes; i++)
-            {
-                GameObject node = new GameObject();
-                node.layer = 8;
-                node.transform.SetParent(path.transform);
-                node.name = i.ToString();
-                node.transform.position = inter1.transform.position + dir * (i + 1);
-                node.AddComponent<Node>();
-                node.AddComponent<BoxCollider>();
-                Collider nodeCollider = node.GetComponent<BoxCollider>();
-                nodeCollider.isTrigger = true;
-                Nodes.Add(node);
-            }
-
-            Node nodeProperties = Nodes[0].GetComponent<Node>();
-            nodeProperties.previousNode = inter1.transform;
-
-            if (numNodes > 1)
-            {
-                nodeProperties.nextNode = Nodes[1].transform;
-            }
-
-            for (int i = 1; i < numNodes-1; i++)
-            {
-                nodeProperties = Nodes[i].GetComponent<Node>();
-                nodeProperties.previousNode = Nodes[i - 1].transform;
-                nodeProperties.nextNode = Nodes[i + 1].transform;
-            }
-
-            nodeProperties = Nodes[numNodes - 1].GetComponent<Node>();
-
-            if (numNodes > 1)
-            {
-                nodeProperties.previousNode = Nodes[numNodes - 2].transform;
-            }
-
-            nodeProperties.nextNode = inter2.transform;
-
-            switch(wayController1.ways)
-            {
-                case 1:
-                    {
-                        wayController1.way1 = Nodes[0].transform;
-                        break;
-                    }
-                case 2:
-                    {
-                        wayController1.way2 = Nodes[0].transform;
-                        break;
-                    }
-                case 3:
-                    {
-                        wayController1.way3 = Nodes[0].transform;
-                        break;
-                    }
-                case 4:
-                    {
-                        wayController1.way4 = Nodes[0].transform;
-                        break;
-                    }
-            }
-            wayController1.ways++;
-
-            switch (wayController2.ways)
-            {
-                case 1:
-                    {
-                        wayController2.way1 = Nodes[numNodes - 1].transform;
-                        break;
-                    }
-                case 2:
-                    {
-                        wayController2.way2 = Nodes[numNodes - 1].transform;
-                        break;
-                    }
-                case 3:
-                    {
-                        wayController2.way3 = Nodes[numNodes - 1].transform;
-                        break;
-                    }
-                case 4:
-                    {
-                        wayController2.way4 = Nodes[numNodes - 1].transform;
-                        break;
-                    }
-            }
-            wayController2.ways++;
-            path.name = "0";
-            path.AddComponent<VehiclePath>();
-        }
-
         widthDistance = EditorGUILayout.Slider(widthDistance, 0, 9);
+
         if (GUILayout.Button("Set selected Nodes Width"))
         {
             foreach (GameObject obj in Selection.gameObjects)
@@ -187,6 +37,352 @@ public class TrafficSystemBuilder : EditorWindow {
                     Node node = obj.GetComponent<Node>();
                     node.widthDistance = widthDistance;
                 }
+            }
+        }
+
+        numNodes = EditorGUILayout.IntSlider(numNodes, 1, 10);
+
+        inter1Obj = EditorGUILayout.ObjectField(inter1Obj, typeof(Object), true);
+        inter2Obj = EditorGUILayout.ObjectField(inter2Obj, typeof(Object), true);
+
+        if (GUILayout.Button("Link Intersections unidirectional"))
+        {
+            LinkIntersections(0);
+        }
+
+        if (GUILayout.Button("Link Intersections bidirectional"))
+        {
+            LinkIntersections(1);
+        }
+
+        if (GUILayout.Button("Add Nodes to Intersection as way"))
+        {
+            if (Selection.gameObjects.Length < 2)
+            {
+                Debug.Log("Please select atleast 2 object");
+                return;
+            }
+
+            GameObject intersection = null;
+            List<GameObject> nodes = new List<GameObject>();
+
+            foreach (GameObject obj in Selection.gameObjects)
+            {
+                if (obj.HasComponent<Node>())
+                {
+                    nodes.Add(obj);
+                }
+                else if (obj.HasComponent<WaysControl>())
+                {
+                    if (intersection == null) {
+                        intersection = obj;
+                    } else
+                    {
+                        Debug.Log("Please select only one intersection");
+                    }
+                }
+            }
+            if (intersection == null)
+            {
+                Debug.Log("Please select an intersection");
+                return;
+            }
+            if (nodes.Count == 0)
+            {
+                Debug.Log("Please select node(s)");
+                return;
+            }
+
+            WaysControl wayController = intersection.GetComponent<WaysControl>();
+
+            foreach (GameObject node in nodes)
+            {
+                AddWay(wayController, node, 0);
+            }
+        }
+
+        if (GUILayout.Button("Equally space nodes group straight"))
+        {
+            spaceNodes();
+        }
+
+        if (GUILayout.Button("Add nodes between selected nodes"))
+        {
+            AddNodesBetweenNodes();
+        }
+
+    }
+
+    void RemovePath()
+    {
+        WaysControl waycontroller1 = (WaysControl)inter1Obj;
+        WaysControl waysController2 = (WaysControl)inter2Obj;
+        for (int i = 0; i < waycontroller1.ways; i++)
+        {
+            Node thisNode;
+            if (i == 0)
+            {
+
+            } else if (i == 1)
+            {
+
+            } else if (i == 2)
+            {
+
+            } else if (i == 3)
+            {
+
+            }
+        }
+    }
+
+    void AddNodesBetweenNodes()
+    {
+        Node start = (Node)inter1Obj;
+        Node end = (Node)inter2Obj;
+        Transform node1 = start.transform;
+        Transform node2 = end.transform;
+        GameObject par1 = node1.parent.gameObject;
+        GameObject par2 = node2.parent.gameObject;
+        if (!node1.gameObject.HasComponent<Node>() || !node2.gameObject.HasComponent<Node>())
+        {
+            Debug.Log("Please select nodes only");
+        }
+        if (par1 != par2)
+        {
+            Debug.Log("Please select nodes of same group");
+        } 
+        if (Mathf.Abs(node1.GetSiblingIndex() - node2.GetSiblingIndex()) != 1)
+        {
+            Debug.Log("Please select adjacent nodes");
+        }
+        if (node1.GetSiblingIndex() > node2.GetSiblingIndex())
+        {
+            Node temp = start;
+            start = end;
+            end = temp;
+            node1 = start.transform;
+            node2 = end.transform;
+        }
+        Transform par = par1.transform;
+        Vector3 dir = (node2.position - node1.position) / (numNodes + 1);
+
+        List<GameObject> nodes = new List<GameObject>();
+        for (int i = 0; i < numNodes; i++)
+        {
+            GameObject node = new GameObject();
+            node.layer = 8;
+            node.transform.SetParent(par);
+            node.name = (i + node1.GetSiblingIndex() + 1).ToString();
+            node.transform.SetSiblingIndex(i + node1.GetSiblingIndex() + 1);
+            node.transform.position = node1.transform.position + dir * (i + 1);
+            node.AddComponent<Node>();
+            Node thisNode = node.GetComponent<Node>();
+            thisNode.widthDistance = widthDistance;
+            node.AddComponent<BoxCollider>();
+            Collider nodeCollider = node.GetComponent<BoxCollider>();
+            nodeCollider.isTrigger = true;
+            nodes.Add(node);
+        }
+        start.nextNode = nodes[0].transform;
+        end.previousNode = nodes[numNodes - 1].transform;
+
+        for (int i = 0; i < numNodes; i++)
+        {
+            Node thisNode = nodes[i].GetComponent<Node>();
+            if (i == 0)
+            {
+                thisNode.previousNode = node1;
+                thisNode.nextNode = nodes[i + 1].transform;
+            } else if (i == numNodes - 1)
+            {
+                thisNode.previousNode = nodes[i - 1].transform;
+                thisNode.nextNode = node2;
+            } else
+            {
+                thisNode.previousNode = nodes[i - 1].transform;
+                thisNode.nextNode = nodes[i + 1].transform;
+            }
+        }
+
+    }
+
+    void LinkIntersections(int wayMode)
+    {
+        WaysControl wayController1 = (WaysControl)inter1Obj;
+        WaysControl wayController2 = (WaysControl)inter2Obj;
+        GameObject inter1 = wayController1.gameObject;
+        GameObject inter2 = wayController2.gameObject;
+
+        if (!inter1.HasComponent<WaysControl>() || !inter2.HasComponent<WaysControl>())
+        {
+            Debug.Log("Please select intersections only");
+        }
+
+        if ((wayController1.ways == 4 && wayController1.way4 != null) || (wayController2.ways == 4 && wayController2.way4 != null))
+        {
+            Debug.Log("Intersection cannot have more than 4 links");
+            return;
+        }
+
+        GameObject path = new GameObject();
+        path.transform.position = (inter1.transform.position + inter2.transform.position) / 2;
+
+        List<GameObject> Nodes = new List<GameObject>();
+
+        Vector3 dir = (inter2.transform.position - inter1.transform.position) / (numNodes + 1);
+
+        for (int i = 0; i < numNodes; i++)
+        {
+            GameObject node = new GameObject();
+            node.layer = 8;
+            node.transform.SetParent(path.transform);
+            node.name = i.ToString();
+            node.transform.position = inter1.transform.position + dir * (i + 1);
+            node.AddComponent<Node>();
+            Node thisNode = node.GetComponent<Node>();
+            thisNode.widthDistance = widthDistance;
+            node.AddComponent<BoxCollider>();
+            Collider nodeCollider = node.GetComponent<BoxCollider>();
+            nodeCollider.isTrigger = true;
+            Nodes.Add(node);
+        }
+
+        Node nodeProperties = Nodes[0].GetComponent<Node>();
+        nodeProperties.previousNode = inter1.transform;
+
+        if (numNodes > 1)
+        {
+            nodeProperties.nextNode = Nodes[1].transform;
+        }
+
+        for (int i = 1; i < numNodes - 1; i++)
+        {
+            nodeProperties = Nodes[i].GetComponent<Node>();
+            nodeProperties.previousNode = Nodes[i - 1].transform;
+            nodeProperties.nextNode = Nodes[i + 1].transform;
+        }
+
+        nodeProperties = Nodes[numNodes - 1].GetComponent<Node>();
+
+        if (numNodes > 1)
+        {
+            nodeProperties.previousNode = Nodes[numNodes - 2].transform;
+        }
+
+        nodeProperties.nextNode = inter2.transform;
+
+        if (wayMode == 0)
+        {
+            AddWay(wayController1, Nodes[0], 0);
+        } else if (wayMode == 1)
+        {
+            AddWay(wayController1, Nodes[0], 1);
+            AddWay(wayController2, Nodes[numNodes - 1], 1);
+        }
+
+        Vector3 parentPos = Vector3.zero;
+        foreach(GameObject node in Nodes)
+        {
+            parentPos += node.transform.position;
+        }
+        parentPos /= Nodes.Count;
+        path.name = "0";
+        path.AddComponent<VehiclePath>();
+    }
+
+    void AddWay(WaysControl wayController, GameObject node, int wayMode)
+    {
+        switch (wayController.ways)
+        {
+            case 1:
+                {
+                    if (wayController.way1 == null)
+                    {
+                        wayController.way1 = node.transform;
+                        wayController.way1Mode = wayMode;
+                    }
+                    else
+                    {
+                        wayController.ways++;
+                        wayController.way2 = node.transform;
+                        wayController.way2Mode = wayMode;
+                    }
+                    break;
+                }
+            case 2:
+                {
+                    if (wayController.way2 == null)
+                    {
+                        wayController.way2 = node.transform;
+                        wayController.way2Mode = wayMode;
+                    }
+                    else
+                    {
+                        wayController.ways++;
+                        wayController.way3 = node.transform;
+                        wayController.way3Mode = wayMode;
+                    }
+                    break;
+                }
+            case 3:
+                {
+                    if (wayController.way3 == null)
+                    {
+                        wayController.way3 = node.transform;
+                        wayController.way3Mode = wayMode;
+                    }
+                    else
+                    {
+                        wayController.ways++;
+                        wayController.way4 = node.transform;
+                        wayController.way4Mode = wayMode;
+                    }
+                    break;
+                }
+        }
+    }
+
+    void spaceNodes()
+    {
+        List<Transform> nodes = new List<Transform>();
+        if (Selection.gameObjects.Length != 1)
+        {
+            Debug.Log("Please select only 1 game object");
+        }
+
+        Transform parentNode = Selection.gameObjects[0].transform;
+        if (parentNode.gameObject.HasComponent<Node>())
+        {
+            parentNode = parentNode.parent;
+        } else if (!parentNode.gameObject.HasComponent<VehiclePath>())
+        {
+            Debug.Log("Please select a node or a parent node");
+            return;
+        }
+
+        if (parentNode.childCount < 3) return;
+        for (int i = 0; i < parentNode.childCount; i++)
+        {
+            nodes.Add(parentNode.GetChild(i));
+        }
+        Vector3 dir = nodes[nodes.Count - 1].position - nodes[0].position;
+        dir = dir / (nodes.Count - 1);
+        for (int i = 1; i < nodes.Count - 1; i++)
+        {
+            nodes[i].position = nodes[0].position + i * dir;
+        }
+    }
+
+    void OnSceneGUI()
+    {
+        Event e = Event.current;
+        Debug.Log("hello");
+        if (e != null)
+        {
+            if (e.isMouse && e.shift && e.type == EventType.MouseDown)
+            {
+                Debug.Log("clicked");
             }
         }
     }
