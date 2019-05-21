@@ -31,7 +31,7 @@ public class AIVehicle : MonoBehaviour
     [HideInInspector]
     public bool AIActive = true;
     [HideInInspector]
-    public Transform currentNode = null, lastNode, nextNode;
+    public Transform currentNode, lastNode, nextNode;
     [HideInInspector]
     public WayMove wayMove = WayMove.Center;
     [HideInInspector]
@@ -72,7 +72,9 @@ public class AIVehicle : MonoBehaviour
     private bool RearGear = false;
     private Transform player;
     private Node nodeComponenet;
-
+    public string turnType = "Straight";
+    public GameObject leftIndicator;
+    public GameObject rightIndicator;
     //-----------------------------------------------------------------------------------------------
 
     void Start()
@@ -91,11 +93,19 @@ public class AIVehicle : MonoBehaviour
         }
     }
 
+    private void Awake()
+    {
+        leftIndicator = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        rightIndicator = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        leftIndicator.transform.position = transform.position + 2 * new Vector3(-1, 2, -1);
+        rightIndicator.transform.position = transform.position + 2 * new Vector3(1, 2 - 1);
+        leftIndicator.transform.parent = transform;
+        rightIndicator.transform.parent = transform;
+    }
 
     private float hittingTimer = 0.0f;
     void Update()
     {
-
 
         if (!AIActive) return;
 
@@ -105,7 +115,101 @@ public class AIVehicle : MonoBehaviour
             if (node != null)
             {
                 forwardSpeed = node.SpeedLimit;
+                turnType = "Straight";
             }
+            else
+            {
+                if (lastNode != null && nextNode != null)
+                {
+                    Node back = lastNode.gameObject.GetComponent<Node>();
+                    Node front = nextNode.gameObject.GetComponent<Node>();
+                    WaysControl waycontroller = currentNode.gameObject.GetComponent<WaysControl>();
+                    bool reverseFront = false;
+                    bool reverseBack = false;
+                    if (waycontroller.way1 == front.transform)
+                    {
+                        reverseFront = (waycontroller.way1Mode == 1 && waycontroller.way1.GetSiblingIndex() != 0);
+                    }
+                    else if (waycontroller.way2 == front.transform)
+                    {
+                        reverseFront = (waycontroller.way2Mode == 1 && waycontroller.way2.GetSiblingIndex() != 0);
+                    }
+                    else if (waycontroller.way3 == front.transform)
+                    {
+                        reverseFront = (waycontroller.way3Mode == 1 && waycontroller.way3.GetSiblingIndex() != 0);
+                    }
+                    else if (waycontroller.way4 == front.transform)
+                    {
+                        reverseFront = (waycontroller.way4Mode == 1 && waycontroller.way4.GetSiblingIndex() != 0);
+                    }
+
+                    if (waycontroller.way1 == back.transform)
+                    {
+                        reverseBack = (waycontroller.way1Mode == 1 && waycontroller.way1.GetSiblingIndex() == 0);
+                    }
+                    else if (waycontroller.way2 == back.transform)
+                    {
+                        reverseBack = (waycontroller.way2Mode == 1 && waycontroller.way2.GetSiblingIndex() == 0);
+                    }
+                    else if (waycontroller.way3 == back.transform)
+                    {
+                        reverseBack = (waycontroller.way3Mode == 1 && waycontroller.way3.GetSiblingIndex() == 0);
+                    }
+                    else if (waycontroller.way4 == back.transform)
+                    {
+                        reverseBack = (waycontroller.way4Mode == 1 && waycontroller.way4.GetSiblingIndex() == 0);
+                    }
+
+                    Vector3 dir1;
+                    Vector3 dir2;
+
+                    if (reverseFront)
+                    {
+                        dir1 = front.previousNode.position - front.transform.position;
+                    }
+                    else
+                    {
+                        dir1 = front.nextNode.position - front.transform.position;
+                    }
+
+                    if (reverseBack)
+                    {
+                        dir2 = back.transform.position - back.nextNode.position;
+                    }
+                    else
+                    {
+                        dir2 = back.transform.position - back.previousNode.position;
+                    }
+
+                    float angle = Vector3.Angle(dir1, dir2);
+                    if (angle > 30f)
+                    {
+                        float turn = Vector3.Cross(dir1, dir2).y;
+                        if (turn > 0)
+                        {
+                            turnType = "Left";
+                        }
+                        else if (turn < 0)
+                        {
+                            turnType = "Right";
+                        }
+                    }
+                }
+            }
+        }
+
+        if (turnType == "Straight")
+        {
+            leftIndicator.SetActive(false);
+            rightIndicator.SetActive(false);
+        } else if (turnType == "Left")
+        {
+            leftIndicator.SetActive(true);
+            rightIndicator.SetActive(false);
+        } else if (turnType == "Right")
+        {
+            leftIndicator.SetActive(false);
+            rightIndicator.SetActive(true);
         }
 
         AIBrake = false;
