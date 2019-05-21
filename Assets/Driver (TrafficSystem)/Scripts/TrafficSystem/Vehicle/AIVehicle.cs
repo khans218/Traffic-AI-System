@@ -31,7 +31,7 @@ public class AIVehicle : MonoBehaviour
     [HideInInspector]
     public bool AIActive = true;
     [HideInInspector]
-    public Transform currentNode, lastNode, nextNode;
+    public Transform currentNode = null, lastNode, nextNode;
     [HideInInspector]
     public WayMove wayMove = WayMove.Center;
     [HideInInspector]
@@ -99,6 +99,14 @@ public class AIVehicle : MonoBehaviour
 
         if (!AIActive) return;
 
+        if (currentNode != null)
+        {
+            Node node = currentNode.gameObject.GetComponent<Node>();
+            if (node != null)
+            {
+                forwardSpeed = node.SpeedLimit;
+            }
+        }
 
         AIBrake = false;
         trafficStop = false;

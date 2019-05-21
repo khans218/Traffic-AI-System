@@ -12,7 +12,7 @@ public static class hasComponent
 }
 
 public class TrafficSystemBuilder : EditorWindow {
-    [MenuItem("Window/Example")]
+    [MenuItem("Window/TrafficSystemEditor")]
     public static void ShowWindow()
     {
         EditorWindow.GetWindow<TrafficSystemBuilder>("TrafficSystemEditor");
@@ -21,13 +21,13 @@ public class TrafficSystemBuilder : EditorWindow {
     public int numNodes;
     Object inter1Obj;
     Object inter2Obj;
-    string myString;
     float widthDistance;
+    float speedLimit;
 
     void OnGUI ()
     {
-        widthDistance = EditorGUILayout.Slider(widthDistance, 0, 9);
-
+        EditorGUILayout.LabelField("Node width");
+        widthDistance = EditorGUILayout.Slider(widthDistance, 0, 9.0f);
         if (GUILayout.Button("Set selected Nodes Width"))
         {
             foreach (GameObject obj in Selection.gameObjects)
@@ -40,11 +40,31 @@ public class TrafficSystemBuilder : EditorWindow {
             }
         }
 
+        EditorGUILayout.LabelField("Node speed limit");
+        speedLimit = EditorGUILayout.Slider(speedLimit, 0, 100.0f);
+        if (GUILayout.Button("Set selected Nodes speed limit"))
+        {
+            foreach (GameObject obj in Selection.gameObjects)
+            {
+                if (obj.HasComponent<Node>())
+                {
+                    Node node = obj.GetComponent<Node>();
+                    node.SpeedLimit = speedLimit;
+                }
+            }
+        }
+
+        EditorGUILayout.LabelField("Number of nodes");
         numNodes = EditorGUILayout.IntSlider(numNodes, 1, 10);
 
+        EditorGUILayout.LabelField("start wayControl/Node 1");
         inter1Obj = EditorGUILayout.ObjectField(inter1Obj, typeof(Object), true);
+        EditorGUILayout.LabelField("end wayControl/Node 2");
         inter2Obj = EditorGUILayout.ObjectField(inter2Obj, typeof(Object), true);
 
+        EditorGUILayout.LabelField("");
+        EditorGUILayout.LabelField("Node 1 and Node 2 need to be adjacent");
+        EditorGUILayout.LabelField("");
         if (GUILayout.Button("Link Intersections unidirectional"))
         {
             LinkIntersections(0);
@@ -110,30 +130,108 @@ public class TrafficSystemBuilder : EditorWindow {
         {
             AddNodesBetweenNodes();
         }
+        if (GUILayout.Button("Organize selected intersection ways"))
+        {
+            foreach(GameObject obj in Selection.gameObjects)
+            {
+                if (obj.HasComponent<WaysControl>())
+                {
+                    OrganizeWays(obj.GetComponent<WaysControl>());
+                }
+            }
+        }
+        if (GUILayout.Button("Delete Path"))
+        {
+            RemovePath();
+        }
 
+    }
+
+    void OrganizeWays(WaysControl waycontroller)
+    {
+        List<Transform> ways = new List<Transform>();
+        for (int i = 0; i < waycontroller.ways; i++)
+        {
+            if (i == 0 && waycontroller.way1 != null)
+            {
+                if (!ways.Contains(waycontroller.way1))
+                {
+                    ways.Add(waycontroller.way1);
+                }
+            } else if (i == 1 && waycontroller.way2 != null)
+            {
+                if (!ways.Contains(waycontroller.way2))
+                {
+                    ways.Add(waycontroller.way2);
+                }
+            } else if (i == 2 && waycontroller.way3 != null)
+            {
+                if (!ways.Contains(waycontroller.way3))
+                {
+                    ways.Add(waycontroller.way3);
+                }
+            } else if (i == 3 && waycontroller.way4 != null)
+            {
+                if (!ways.Contains(waycontroller.way4))
+                {
+                    ways.Add(waycontroller.way4);
+                }
+            }
+        }
+        if (ways.Count == 0)
+        {
+            waycontroller.ways = 1;
+            return;
+        }
+        waycontroller.ways = ways.Count;
+        for (int i = 0; i < waycontroller.ways; i++)
+        {
+            switch(i)
+            {
+                case 0:
+                    {
+                        waycontroller.way1 = ways[i];
+                        break;
+                    }
+                case 1:
+                    {
+                        waycontroller.way2 = ways[i];
+                        break;
+                    }
+                case 2:
+                    {
+                        waycontroller.way3 = ways[i];
+                        break;
+                    }
+                case 3:
+                    {
+                        waycontroller.way4 = ways[i];
+                        break;
+                    }
+            }
+        }
     }
 
     void RemovePath()
     {
-        WaysControl waycontroller1 = (WaysControl)inter1Obj;
-        WaysControl waysController2 = (WaysControl)inter2Obj;
-        for (int i = 0; i < waycontroller1.ways; i++)
+
+        if (Selection.gameObjects.Length != 1)
         {
-            Node thisNode;
-            if (i == 0)
-            {
-
-            } else if (i == 1)
-            {
-
-            } else if (i == 2)
-            {
-
-            } else if (i == 3)
-            {
-
-            }
+            Debug.Log("Please select only one object");
+            return;
         }
+        if (!Selection.gameObjects[0].HasComponent<Node>())
+        {
+            Debug.Log("Please select a node");
+        }
+        GameObject parent = Selection.gameObjects[0].transform.parent.gameObject;
+        Node firstNode = parent.transform.GetChild(0).gameObject.GetComponent<Node>();
+        Node lastNode = parent.transform.GetChild(parent.transform.childCount - 1).gameObject.GetComponent<Node>();
+        WaysControl waycontroller1 = firstNode.previousNode.gameObject.GetComponent<WaysControl>();
+        WaysControl waycontroller2 = lastNode.nextNode.gameObject.GetComponent<WaysControl>();
+        DestroyImmediate(parent);
+        OrganizeWays(waycontroller1);
+        OrganizeWays(waycontroller2);
     }
 
     void AddNodesBetweenNodes()
@@ -179,6 +277,7 @@ public class TrafficSystemBuilder : EditorWindow {
             node.AddComponent<Node>();
             Node thisNode = node.GetComponent<Node>();
             thisNode.widthDistance = widthDistance;
+            thisNode.SpeedLimit = speedLimit;
             node.AddComponent<BoxCollider>();
             Collider nodeCollider = node.GetComponent<BoxCollider>();
             nodeCollider.isTrigger = true;
@@ -242,6 +341,7 @@ public class TrafficSystemBuilder : EditorWindow {
             node.AddComponent<Node>();
             Node thisNode = node.GetComponent<Node>();
             thisNode.widthDistance = widthDistance;
+            thisNode.SpeedLimit = speedLimit;
             node.AddComponent<BoxCollider>();
             Collider nodeCollider = node.GetComponent<BoxCollider>();
             nodeCollider.isTrigger = true;

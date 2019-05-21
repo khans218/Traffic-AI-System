@@ -25,6 +25,8 @@ public class Node : MonoBehaviour
     [HideInInspector]
     public bool trafficNode = false; // When traffic control active (tarffic light)
 
+    public float SpeedLimit = 5.0f;
+
     void OnDrawGizmos()
     {
 
