@@ -3,6 +3,7 @@ using System.Collections;
 
 public enum VehicleStatus { EmptyOff, EmptyOn, AI, Player }
 public enum WayMove { Center = 1, Right = 2, Left = 3 }
+public enum TurnType { Straight, Left, Right}
 
 public class AIVehicle : MonoBehaviour
 {
@@ -30,7 +31,7 @@ public class AIVehicle : MonoBehaviour
     public bool trafficStop = false;
     [HideInInspector]
     public bool AIActive = true;
-    [HideInInspector]
+    //[HideInInspector]
     public Transform currentNode, lastNode, nextNode;
     [HideInInspector]
     public WayMove wayMove = WayMove.Center;
@@ -72,9 +73,13 @@ public class AIVehicle : MonoBehaviour
     private bool RearGear = false;
     private Transform player;
     private Node nodeComponenet;
-    public string turnType = "Straight";
+    public TurnType nextTurn = TurnType.Straight;
     public GameObject leftIndicator;
     public GameObject rightIndicator;
+    public bool isTurning = false;
+    public float diff;
+    Vector3 oldDir;
+    public Transform nextWay;
     //-----------------------------------------------------------------------------------------------
 
     void Start()
@@ -108,109 +113,6 @@ public class AIVehicle : MonoBehaviour
     {
 
         if (!AIActive) return;
-
-        if (currentNode != null)
-        {
-            Node node = currentNode.gameObject.GetComponent<Node>();
-            if (node != null)
-            {
-                forwardSpeed = node.SpeedLimit;
-                turnType = "Straight";
-            }
-            else
-            {
-                if (lastNode != null && nextNode != null)
-                {
-                    Node back = lastNode.gameObject.GetComponent<Node>();
-                    Node front = nextNode.gameObject.GetComponent<Node>();
-                    WaysControl waycontroller = currentNode.gameObject.GetComponent<WaysControl>();
-                    bool reverseFront = false;
-                    bool reverseBack = false;
-                    if (waycontroller.way1 == front.transform)
-                    {
-                        reverseFront = (waycontroller.way1Mode == 1 && waycontroller.way1.GetSiblingIndex() != 0);
-                    }
-                    else if (waycontroller.way2 == front.transform)
-                    {
-                        reverseFront = (waycontroller.way2Mode == 1 && waycontroller.way2.GetSiblingIndex() != 0);
-                    }
-                    else if (waycontroller.way3 == front.transform)
-                    {
-                        reverseFront = (waycontroller.way3Mode == 1 && waycontroller.way3.GetSiblingIndex() != 0);
-                    }
-                    else if (waycontroller.way4 == front.transform)
-                    {
-                        reverseFront = (waycontroller.way4Mode == 1 && waycontroller.way4.GetSiblingIndex() != 0);
-                    }
-
-                    if (waycontroller.way1 == back.transform)
-                    {
-                        reverseBack = (waycontroller.way1Mode == 1 && waycontroller.way1.GetSiblingIndex() == 0);
-                    }
-                    else if (waycontroller.way2 == back.transform)
-                    {
-                        reverseBack = (waycontroller.way2Mode == 1 && waycontroller.way2.GetSiblingIndex() == 0);
-                    }
-                    else if (waycontroller.way3 == back.transform)
-                    {
-                        reverseBack = (waycontroller.way3Mode == 1 && waycontroller.way3.GetSiblingIndex() == 0);
-                    }
-                    else if (waycontroller.way4 == back.transform)
-                    {
-                        reverseBack = (waycontroller.way4Mode == 1 && waycontroller.way4.GetSiblingIndex() == 0);
-                    }
-
-                    Vector3 dir1;
-                    Vector3 dir2;
-
-                    if (reverseFront)
-                    {
-                        dir1 = front.previousNode.position - front.transform.position;
-                    }
-                    else
-                    {
-                        dir1 = front.nextNode.position - front.transform.position;
-                    }
-
-                    if (reverseBack)
-                    {
-                        dir2 = back.transform.position - back.nextNode.position;
-                    }
-                    else
-                    {
-                        dir2 = back.transform.position - back.previousNode.position;
-                    }
-
-                    float angle = Vector3.Angle(dir1, dir2);
-                    if (angle > 30f)
-                    {
-                        float turn = Vector3.Cross(dir1, dir2).y;
-                        if (turn > 0)
-                        {
-                            turnType = "Left";
-                        }
-                        else if (turn < 0)
-                        {
-                            turnType = "Right";
-                        }
-                    }
-                }
-            }
-        }
-
-        if (turnType == "Straight")
-        {
-            leftIndicator.SetActive(false);
-            rightIndicator.SetActive(false);
-        } else if (turnType == "Left")
-        {
-            leftIndicator.SetActive(true);
-            rightIndicator.SetActive(false);
-        } else if (turnType == "Right")
-        {
-            leftIndicator.SetActive(false);
-            rightIndicator.SetActive(true);
-        }
 
         AIBrake = false;
         trafficStop = false;
@@ -345,7 +247,7 @@ public class AIVehicle : MonoBehaviour
         else
             AISteer = Mathf.SmoothStep(AISteer, targetAngle / 60, steerSpeed / 3.0f);
 
-
+        ExtraAI();
         AIControl();
 
 
@@ -386,6 +288,57 @@ public class AIVehicle : MonoBehaviour
         }
     }
 
+    void ExtraAI()
+    {
+        if (currentNode != null)
+        {
+            Node node = currentNode.gameObject.GetComponent<Node>();
+            if (node != null)
+            {
+                forwardSpeed = node.SpeedLimit;
+            }
+        }
+
+        if (nextNode.GetComponent<WaysControl>() && !isTurning)
+        {
+            isTurning = true;
+            oldDir = transform.forward;
+            nextWay = RandomWay(nextNode, currentNode);
+            Vector3 dir1 = nextNode.position - currentNode.position;
+            Vector3 dir2 = nextWay.position - nextNode.position;
+            if (Vector3.Angle(dir1, dir2) > 30)
+            {
+                float turn = Vector3.Cross(dir1, dir2).y;
+                nextTurn = (turn > 0) ? TurnType.Right : TurnType.Left;
+            } else
+            {
+                nextTurn = TurnType.Straight;
+            }
+        }
+
+        if (isTurning)
+        {
+            leftIndicator.SetActive(nextTurn == TurnType.Left);
+            rightIndicator.SetActive(nextTurn == TurnType.Right);
+            if (nextTurn == TurnType.Straight)
+            {
+                isTurning = currentNode.GetComponent<Node>();
+            } else
+            {
+                diff = Vector3.Angle(oldDir, transform.forward);
+                if (diff > 42)
+                {
+                    isTurning = false;
+                }
+            }
+        } else
+        {
+            leftIndicator.SetActive(false);
+            rightIndicator.SetActive(false);
+        }
+
+    }
+
 
     void AIControl()
     {
@@ -419,7 +372,8 @@ public class AIVehicle : MonoBehaviour
                 if (!waysActive)
                 {
                     var waysScript = currentNode.GetComponent<WaysControl>();
-                    nextNode = RandomWay(nextNode, waysScript.ways);
+                    //nextNode = RandomWay(nextNode, waysScript.ways);
+                    nextNode = nextWay;
                     waysActive = true;
                 }
 
@@ -455,15 +409,19 @@ public class AIVehicle : MonoBehaviour
     //RandomWay//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-    Transform RandomWay(Transform node, int maxWays)
+    Transform RandomWay(Transform inter, Transform prev)
     {
-        WaysControl waysControl = currentNode.GetComponent<WaysControl>();
+        //WaysControl waysControl = currentNode.GetComponent<WaysControl>();
+        WaysControl waysControl = inter.GetComponent<WaysControl>();
+        Transform node = inter;
+        int maxWays = waysControl.ways;
 
         while (wayActive == false)
         {
             if (maxWays == 1)
             {
                 randomWays = 1;
+                if (waysControl.way1 != prev) { node = waysControl.way1; }
                 wayActive = true;
             }
             else
@@ -474,7 +432,7 @@ public class AIVehicle : MonoBehaviour
                 {
                     case 1:
 
-                        if (waysControl.way1 != lastNode)
+                        if (waysControl.way1 != prev)
                         {
                             oneWay = waysControl.way1Mode == 0 ? true : false;
 
@@ -489,7 +447,7 @@ public class AIVehicle : MonoBehaviour
 
                     case 2:
 
-                        if (waysControl.way2 != lastNode)
+                        if (waysControl.way2 != prev)
                         {
                             oneWay = waysControl.way2Mode == 0 ? true : false;
 
@@ -504,7 +462,7 @@ public class AIVehicle : MonoBehaviour
                         break;
 
                     case 3:
-                        if (waysControl.way3 != lastNode)
+                        if (waysControl.way3 != prev)
                         {
                             oneWay = waysControl.way3Mode == 0 ? true : false;
 
@@ -519,7 +477,7 @@ public class AIVehicle : MonoBehaviour
                         break;
 
                     case 4:
-                        if (waysControl.way4 != lastNode)
+                        if (waysControl.way4 != prev)
                         {
                             oneWay = waysControl.way4Mode == 0 ? true : false;
 
