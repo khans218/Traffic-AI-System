@@ -47,7 +47,8 @@ public class CreateAI : MonoBehaviour
                 if (Physics.Raycast(CurrentNode.transform.position, -Vector3.up, out hit))
                 {
                     AIContoller.manager.currentVehicles++;
-                    AiVehicleCreated = Instantiate(AIVehicle, hit.point + (Vector3.up / 2.0f), Quaternion.identity) as GameObject;
+                    ///AiVehicleCreated = Instantiate(AIVehicle, hit.point + (Vector3.up / 2.0f), Quaternion.identity) as GameObject;
+                    AiVehicleCreated = Lean.Pool.LeanPool.Spawn(AIVehicle, hit.point + (Vector3.up / 2.0f), Quaternion.identity) as GameObject;
                 }
                 AiVehicleCreated.name = "AIVehicle";
 

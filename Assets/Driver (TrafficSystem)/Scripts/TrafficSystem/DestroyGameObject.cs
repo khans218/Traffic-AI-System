@@ -16,8 +16,8 @@ public class DestroyGameObject : MonoBehaviour
 
         if (Vector3.Distance(transform.position, AIContoller.manager.player.transform.position) > clearDistance && !myBody.isVisible)
         {
-            Destroy(myRoot);
-
+            //Destroy(myRoot);
+            Lean.Pool.LeanPool.Despawn(myRoot);
             if (human) AIContoller.manager.currentHumans--;
             if (vehicle) AIContoller.manager.currentVehicles--;
             

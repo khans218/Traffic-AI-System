@@ -79,7 +79,7 @@ public class AIVehicle : MonoBehaviour
     public bool isTurning = false;
     public float diff;
     Vector3 oldDir;
-    public Transform nextWay;
+    public Transform nextWay = null;
     WayMove nextWayMove;
     //-----------------------------------------------------------------------------------------------
 
@@ -112,6 +112,33 @@ public class AIVehicle : MonoBehaviour
     private float hittingTimer = 0.0f;
     void Update()
     {
+        if (nextNode == null)
+        {
+            Debug.Log("hello");
+        }
+        if (nextNode == currentNode)
+        {
+            if (nextNode.GetComponent<Node>())
+            {
+                if (wayMove == WayMove.Right)
+                {
+                    nextNode = nextNode.GetComponent<Node>().nextNode;
+                } else if (wayMove == WayMove.Left)
+                {
+                    nextNode = nextNode.GetComponent<Node>().previousNode;
+                }
+            }
+        }
+        if (nextNode.GetComponent<WaysControl>())
+        {
+            if (wayMove == WayMove.Right)
+            {
+                if (nextWay == currentNode.parent.GetChild(0)) { isTurning = false; }
+            } else if (wayMove == WayMove.Left)
+            {
+                if (nextWay == currentNode.parent.GetChild(currentNode.parent.childCount - 1)) { isTurning = false; }
+            }
+        }
 
         if (!AIActive) return;
 
@@ -307,7 +334,7 @@ public class AIVehicle : MonoBehaviour
             nextWay = RandomWay(nextNode, currentNode);
             Vector3 dir1 = nextNode.position - currentNode.position;
             Vector3 dir2 = nextWay.position - nextNode.position;
-            if (Vector3.Angle(dir1, dir2) > 30)
+            if (Vector3.Angle(dir1, dir2) > 20)
             {
                 float turn = Vector3.Cross(dir1, dir2).y;
                 nextTurn = (turn > 0) ? TurnType.Right : TurnType.Left;
