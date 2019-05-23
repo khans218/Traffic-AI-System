@@ -80,6 +80,7 @@ public class AIVehicle : MonoBehaviour
     public float diff;
     Vector3 oldDir;
     public Transform nextWay;
+    WayMove nextWayMove;
     //-----------------------------------------------------------------------------------------------
 
     void Start()
@@ -247,9 +248,9 @@ public class AIVehicle : MonoBehaviour
         else
             AISteer = Mathf.SmoothStep(AISteer, targetAngle / 60, steerSpeed / 3.0f);
 
+
         ExtraAI();
         AIControl();
-
 
         var relativeTarget = transform.InverseTransformPoint(nextNode.position);
 
@@ -373,6 +374,7 @@ public class AIVehicle : MonoBehaviour
                 {
                     var waysScript = currentNode.GetComponent<WaysControl>();
                     //nextNode = RandomWay(nextNode, waysScript.ways);
+                    wayMove = nextWayMove;
                     nextNode = nextWay;
                     waysActive = true;
                 }
@@ -435,8 +437,8 @@ public class AIVehicle : MonoBehaviour
                         if (waysControl.way1 != prev)
                         {
                             oneWay = waysControl.way1Mode == 0 ? true : false;
-
-                            if (int.Parse(waysControl.way1.name) > 1) wayMove = WayMove.Left; else wayMove = WayMove.Right;
+                            
+                            if (int.Parse(waysControl.way1.name) > 1) nextWayMove = WayMove.Left; else nextWayMove = WayMove.Right;
 
                             node = waysControl.way1;
                             myStatue = waysControl.way1.GetComponent<Node>().nodeState;
@@ -451,7 +453,7 @@ public class AIVehicle : MonoBehaviour
                         {
                             oneWay = waysControl.way2Mode == 0 ? true : false;
 
-                            if (int.Parse(waysControl.way2.name) > 1) wayMove = WayMove.Left; else wayMove = WayMove.Right;
+                            if (int.Parse(waysControl.way2.name) > 1) nextWayMove = WayMove.Left; else nextWayMove = WayMove.Right;
 
                             node = waysControl.way2;
                             myStatue = waysControl.way2.GetComponent<Node>().nodeState;
@@ -466,7 +468,7 @@ public class AIVehicle : MonoBehaviour
                         {
                             oneWay = waysControl.way3Mode == 0 ? true : false;
 
-                            if (int.Parse(waysControl.way3.name) > 1) wayMove = WayMove.Left; else wayMove = WayMove.Right;
+                            if (int.Parse(waysControl.way3.name) > 1) nextWayMove = WayMove.Left; else nextWayMove = WayMove.Right;
 
                             node = waysControl.way3;
                             myStatue = waysControl.way3.GetComponent<Node>().nodeState;
@@ -481,7 +483,7 @@ public class AIVehicle : MonoBehaviour
                         {
                             oneWay = waysControl.way4Mode == 0 ? true : false;
 
-                            if (int.Parse(waysControl.way4.name) > 1) wayMove = WayMove.Left; else wayMove = WayMove.Right;
+                            if (int.Parse(waysControl.way4.name) > 1) nextWayMove = WayMove.Left; else nextWayMove = WayMove.Right;
 
                             node = waysControl.way4;
                             myStatue = waysControl.way4.GetComponent<Node>().nodeState;
