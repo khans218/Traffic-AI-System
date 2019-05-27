@@ -11,7 +11,8 @@ public static class hasComponent
     }
 }
 
-public class TrafficSystemBuilder : EditorWindow {
+public class TrafficSystemBuilder : EditorWindow
+{
     [MenuItem("Window/TrafficSystemEditor")]
     public static void ShowWindow()
     {
@@ -24,7 +25,7 @@ public class TrafficSystemBuilder : EditorWindow {
     float widthDistance;
     float speedLimit;
 
-    void OnGUI ()
+    void OnGUI()
     {
         EditorGUILayout.LabelField("Node width");
         widthDistance = EditorGUILayout.Slider(widthDistance, 0, 9.0f);
@@ -64,7 +65,10 @@ public class TrafficSystemBuilder : EditorWindow {
 
         EditorGUILayout.LabelField("");
         EditorGUILayout.LabelField("Node 1 and Node 2 need to be adjacent");
-        EditorGUILayout.LabelField("");
+        if (GUILayout.Button("Create AIController"))
+        {
+            CreateAIController();
+        }
         if (GUILayout.Button("Link Intersections unidirectional"))
         {
             LinkIntersections(0);
@@ -94,9 +98,11 @@ public class TrafficSystemBuilder : EditorWindow {
                 }
                 else if (obj.HasComponent<WaysControl>())
                 {
-                    if (intersection == null) {
+                    if (intersection == null)
+                    {
                         intersection = obj;
-                    } else
+                    }
+                    else
                     {
                         Debug.Log("Please select only one intersection");
                     }
@@ -132,7 +138,7 @@ public class TrafficSystemBuilder : EditorWindow {
         }
         if (GUILayout.Button("Organize selected intersection ways"))
         {
-            foreach(GameObject obj in Selection.gameObjects)
+            foreach (GameObject obj in Selection.gameObjects)
             {
                 if (obj.HasComponent<WaysControl>())
                 {
@@ -144,7 +150,10 @@ public class TrafficSystemBuilder : EditorWindow {
         {
             RemovePath();
         }
-
+        if (GUILayout.Button("Align selected nodes with road below"))
+        {
+            AlignWithRoad();
+        }
     }
 
     void OrganizeWays(WaysControl waycontroller)
@@ -158,19 +167,22 @@ public class TrafficSystemBuilder : EditorWindow {
                 {
                     ways.Add(waycontroller.way1);
                 }
-            } else if (i == 1 && waycontroller.way2 != null)
+            }
+            else if (i == 1 && waycontroller.way2 != null)
             {
                 if (!ways.Contains(waycontroller.way2))
                 {
                     ways.Add(waycontroller.way2);
                 }
-            } else if (i == 2 && waycontroller.way3 != null)
+            }
+            else if (i == 2 && waycontroller.way3 != null)
             {
                 if (!ways.Contains(waycontroller.way3))
                 {
                     ways.Add(waycontroller.way3);
                 }
-            } else if (i == 3 && waycontroller.way4 != null)
+            }
+            else if (i == 3 && waycontroller.way4 != null)
             {
                 if (!ways.Contains(waycontroller.way4))
                 {
@@ -186,7 +198,7 @@ public class TrafficSystemBuilder : EditorWindow {
         waycontroller.ways = ways.Count;
         for (int i = 0; i < waycontroller.ways; i++)
         {
-            switch(i)
+            switch (i)
             {
                 case 0:
                     {
@@ -208,6 +220,43 @@ public class TrafficSystemBuilder : EditorWindow {
                         waycontroller.way4 = ways[i];
                         break;
                     }
+            }
+        }
+    }
+
+    void CreateAIController()
+    {
+        GameObject AIcontroller = new GameObject();
+        GameObject AI = new GameObject();
+        GameObject Paths = new GameObject();
+        GameObject Ways = new GameObject();
+        AIcontroller.name = "AIController";
+        AI.name = "AI";
+        Paths.name = "Paths";
+        Ways.name = "Ways";
+        AI.transform.parent = AIcontroller.transform;
+        Paths.transform.parent = AI.transform;
+        Ways.transform.parent = AI.transform;
+        AIcontroller.AddComponent<AIContoller>();
+        Paths.AddComponent<SortPaths>();
+        Ways.AddComponent<SortWays>();
+        GameObject way = new GameObject();
+        way.AddComponent<WaysControl>();
+        way.transform.position = Vector3.zero;
+        way.transform.parent = Ways.transform;
+    }
+
+    void AlignWithRoad()
+    {
+        foreach (GameObject obj in Selection.gameObjects)
+        {
+            if (obj.HasComponent<Node>() || obj.HasComponent<WaysControl>())
+            {
+                RaycastHit hit;
+                if (Physics.Raycast(obj.transform.position, Vector3.down, out hit))
+                {
+                    obj.transform.position = hit.point + 1.5f * Vector3.up;
+                }
             }
         }
     }
@@ -249,7 +298,7 @@ public class TrafficSystemBuilder : EditorWindow {
         if (par1 != par2)
         {
             Debug.Log("Please select nodes of same group");
-        } 
+        }
         if (Mathf.Abs(node1.GetSiblingIndex() - node2.GetSiblingIndex()) != 1)
         {
             Debug.Log("Please select adjacent nodes");
@@ -293,11 +342,13 @@ public class TrafficSystemBuilder : EditorWindow {
             {
                 thisNode.previousNode = node1;
                 thisNode.nextNode = nodes[i + 1].transform;
-            } else if (i == numNodes - 1)
+            }
+            else if (i == numNodes - 1)
             {
                 thisNode.previousNode = nodes[i - 1].transform;
                 thisNode.nextNode = node2;
-            } else
+            }
+            else
             {
                 thisNode.previousNode = nodes[i - 1].transform;
                 thisNode.nextNode = nodes[i + 1].transform;
@@ -375,14 +426,15 @@ public class TrafficSystemBuilder : EditorWindow {
         if (wayMode == 0)
         {
             AddWay(wayController1, Nodes[0], 0);
-        } else if (wayMode == 1)
+        }
+        else if (wayMode == 1)
         {
             AddWay(wayController1, Nodes[0], 1);
             AddWay(wayController2, Nodes[numNodes - 1], 1);
         }
 
         Vector3 parentPos = Vector3.zero;
-        foreach(GameObject node in Nodes)
+        foreach (GameObject node in Nodes)
         {
             parentPos += node.transform.position;
         }
@@ -455,7 +507,8 @@ public class TrafficSystemBuilder : EditorWindow {
         if (parentNode.gameObject.HasComponent<Node>())
         {
             parentNode = parentNode.parent;
-        } else if (!parentNode.gameObject.HasComponent<VehiclePath>())
+        }
+        else if (!parentNode.gameObject.HasComponent<VehiclePath>())
         {
             Debug.Log("Please select a node or a parent node");
             return;
@@ -471,19 +524,6 @@ public class TrafficSystemBuilder : EditorWindow {
         for (int i = 1; i < nodes.Count - 1; i++)
         {
             nodes[i].position = nodes[0].position + i * dir;
-        }
-    }
-
-    void OnSceneGUI()
-    {
-        Event e = Event.current;
-        Debug.Log("hello");
-        if (e != null)
-        {
-            if (e.isMouse && e.shift && e.type == EventType.MouseDown)
-            {
-                Debug.Log("clicked");
-            }
         }
     }
 }

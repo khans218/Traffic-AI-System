@@ -81,6 +81,7 @@ public class AIVehicle : MonoBehaviour
     Vector3 oldDir;
     public Transform nextWay = null;
     WayMove nextWayMove;
+    public bool moveAside;
     //-----------------------------------------------------------------------------------------------
 
     void Start()
@@ -281,10 +282,16 @@ public class AIVehicle : MonoBehaviour
 
         var relativeTarget = transform.InverseTransformPoint(nextNode.position);
 
-        targetAngle = Mathf.Atan2(relativeTarget.x + widthDistance, relativeTarget.z);
-        targetAngle *= Mathf.Rad2Deg;
-        targetAngle = Mathf.Clamp(targetAngle + raycastSteer, -65, 65);
-
+        if (moveAside)
+        {
+            targetAngle = -20;
+        }
+        else
+        {
+            targetAngle = Mathf.Atan2(relativeTarget.x + widthDistance, relativeTarget.z);
+            targetAngle *= Mathf.Rad2Deg;
+            targetAngle = Mathf.Clamp(targetAngle + raycastSteer, -65, 65);
+        }
     }
 
     //AIWayPoints//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -334,6 +341,8 @@ public class AIVehicle : MonoBehaviour
             nextWay = RandomWay(nextNode, currentNode);
             Vector3 dir1 = nextNode.position - currentNode.position;
             Vector3 dir2 = nextWay.position - nextNode.position;
+            dir1.y = 0;
+            dir2.y = 0;
             if (Vector3.Angle(dir1, dir2) > 20)
             {
                 float turn = Vector3.Cross(dir1, dir2).y;
